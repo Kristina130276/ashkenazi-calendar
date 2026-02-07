@@ -1,333 +1,100 @@
-<!doctype html>
-<html lang="he" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>היום — לוח אשכנזי</title>
+<script>
+(async function () {
+  // ====== Location: Israel (Ofakim) ======
+  const geonameid = 293992;
 
-  <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#f2f2f2; direction: rtl; }
+  // ====== Today (local) ======
+  const now = new Date();
 
-    /* two-column layout */
-    .wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
-    .layout{
-      display:grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap:16px;
-      width:min(1100px, 98vw);
-      align-items:start;
+  // ====== Gregorian date: DD.MM.YYYY ======
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const y = now.getFullYear();
+  document.getElementById('gregorian-date').textContent = `${d}.${m}.${y}`;
+
+  // ====== ISO date for API ======
+  const isoDate = `${y}-${m}-${d}`;
+
+  try {
+    // ====== Hebrew date ======
+    const convUrl = `https://www.hebcal.com/converter?cfg=json&date=${isoDate}&g2h=1&strict=1`;
+    const conv = await (await fetch(convUrl)).json();
+    document.getElementById('hebrewDate').textContent = conv.hebrew;
+
+    // ====== Melacha status ======
+    const zmanimUrl = `https://www.hebcal.com/zmanim?cfg=json&geonameid=${geonameid}`;
+    const zmanim = await (await fetch(zmanimUrl)).json();
+
+    const stEl = document.getElementById('melachaStatus');
+    if (zmanim?.status?.isAssurBemelacha === true) {
+      stEl.textContent = 'אסור מלאכה עכשיו';
+      stEl.className = 'status no';
+    } else {
+      stEl.textContent = 'מותר מלאכה עכשיו';
+      stEl.className = 'status ok';
     }
 
-    /* card base */
-    .card { background:#fff; border-radius:16px; padding:24px 22px; box-shadow:0 12px 30px rgba(0,0,0,.10); }
+    // ====== Events today ======
+    const calUrl =
+      `https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&mf=on&ss=on` +
+      `&start=${isoDate}&end=${isoDate}&lg=he&geo=geoname&geonameid=${geonameid}`;
 
-    h1 { margin:0 0 10px; font-size:34px; }
-    .date { font-size:22px; margin:6px 0 14px; color:#111; }
-    .greg { font-size:18px; margin:0 0 10px; color:#555; }
-    .status { font-size:20px; margin:10px 0 14px; font-weight:700; }
-    .ok { color:#0a7a2f; }
-    .no { color:#b00020; }
+    const cal = await (await fetch(calUrl)).json();
+    const items = (cal.items || []);
 
-    .events { margin-top:10px; padding:12px 14px; background:#fafafa; border-radius:12px; }
-    .events h2 { margin:0 0 8px; font-size:18px; }
-    ul { margin:0; padding-right:18px; }
-    li { margin:6px 0; }
+    const eventsBox = document.getElementById('eventsBox');
+    eventsBox.innerHTML = '';
 
-    .small { margin-top:14px; color:#666; font-size:13px; line-height:1.35; }
-    .loader { color:#666; }
+    // ====== Ashkenazi MVP labels ======
+    const ashkenaziNotes = [];
 
-    /* month calendar */
-    .calendarCard{ padding:18px; }
-    .calHeader{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:10px;
-    }
-    .calHeader button{
-      border:1px solid #ddd;
-      background:#fff;
-      border-radius:10px;
-      padding:6px 10px;
-      font-size:18px;
-      cursor:pointer;
-    }
-    #calTitle{ font-weight:700; font-size:18px; }
+    // 1) Selichot (Ashkenazi) — informational MVP
+    // We mark it textually (no heavy calculations in MVP)
+    ashkenaziNotes.push('תחילת סליחות — מנהג אשכנז (לפי המנהג)');
 
-    .dow{
-      display:grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap:8px;
-      font-size:12px;
-      color:#666;
-      margin-bottom:8px;
-      text-align:center;
-    }
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap:8px;
-    }
-    .day{
-      border:1px solid #eee;
-      border-radius:12px;
-      padding:8px;
-      min-height:84px;
-      background:#fff;
-    }
-    .day .num{
-      font-weight:700;
-      font-size:14px;
-    }
-    .day .items{
-      margin-top:6px;
-      font-size:12px;
-      line-height:1.2;
-      color:#333;
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-    .badge{
-      background:#eef3ff;
-      border-radius:8px;
-      padding:3px 6px;
-      display:inline-block;
-    }
-    .muted{ opacity:0.35; }
-    .todayMark{ outline:2px solid #222; }
+    // 2) Mourning periods — informational MVP
+    ashkenaziNotes.push('ספירת העומר — מנהגי אבלות (אשכנז)');
+    ashkenaziNotes.push('בין המצרים / תשעת הימים — לפי מנהג אשכנז');
 
-    /* mobile */
-    @media (max-width: 900px){
-      .layout{ grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
+    // Render Hebcal events (holidays/parashat)
+    const ul = document.createElement('ul');
 
-<body>
-  <div class="wrap">
-    <div class="layout">
-
-      <!-- LEFT: Today card -->
-      <div class="card" id="todayCard">
-        <h1>היום</h1>
-
-        <!-- Gregorian date (DD.MM.YYYY) -->
-        <div class="greg" id="gregorian-date"><span class="loader">טוען…</span></div>
-
-        <!-- Hebrew date -->
-        <div class="date" id="hebrewDate"><span class="loader">טוען…</span></div>
-
-        <!-- Melacha status -->
-        <div class="status" id="melachaStatus"><span class="loader">טוען…</span></div>
-
-        <!-- Events -->
-        <div class="events">
-          <h2>אירועים / חגים היום</h2>
-          <div id="eventsBox"><span class="loader">טוען…</span></div>
-        </div>
-
-        <div class="small">
-          הנתונים מגיעים מ-Hebcal. לבדיקה הלכתית — לפי רב/מנהג הקהילה.
-        </div>
-      </div>
-
-      <!-- RIGHT: Month calendar -->
-      <div class="card calendarCard">
-        <div class="calHeader">
-          <button id="prevMonth">‹</button>
-          <div id="calTitle">—</div>
-          <button id="nextMonth">›</button>
-        </div>
-
-        <!-- Mon..Sun (Hebrew letters) -->
-        <div class="dow">
-          <div>ב</div><div>ג</div><div>ד</div><div>ה</div><div>ו</div><div>ש</div><div>א</div>
-        </div>
-
-        <div id="calGrid" class="grid"></div>
-      </div>
-
-    </div>
-  </div>
-
-  <script>
-    (async function () {
-      // Location: Ofakim (GeoNames ID 293992)
-      const geonameid = 293992;
-
-      // Local "today" from the computer
-      const now = new Date();
-
-      // ===== Gregorian date: DD.MM.YYYY =====
-      const d = String(now.getDate()).padStart(2, '0');
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const y = now.getFullYear();
-      document.getElementById('gregorian-date').textContent = `${d}.${m}.${y}`;
-
-      // ISO date YYYY-MM-DD for API
-      const isoDate = `${y}-${m}-${d}`;
-
-      try {
-        // ===== 1) Hebrew date (converter) =====
-        const convUrl = `https://www.hebcal.com/converter?cfg=json&date=${isoDate}&g2h=1&strict=1`;
-        const conv = await (await fetch(convUrl)).json();
-        document.getElementById('hebrewDate').textContent = conv.hebrew;
-
-        // ===== 2) Melacha now? (zmanim) =====
-        const imUrl = `https://www.hebcal.com/zmanim?cfg=json&geonameid=${geonameid}`;
-        const im = await (await fetch(imUrl)).json();
-
-        const isAssur = im?.status?.isAssurBemelacha === true;
-        const stEl = document.getElementById('melachaStatus');
-
-        if (isAssur) {
-          stEl.textContent = 'אסור מלאכה עכשיו';
-          stEl.className = 'status no';
-        } else {
-          stEl.textContent = 'מותר מלאכה עכשיו';
-          stEl.className = 'status ok';
-        }
-
-        // ===== 3) Events for today (Hebcal Jewish calendar API) =====
-        const calUrlToday =
-          `https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&mf=on&ss=on` +
-          `&start=${isoDate}&end=${isoDate}&lg=he&geo=geoname&geonameid=${geonameid}`;
-
-        const calToday = await (await fetch(calUrlToday)).json();
-        const itemsToday = (calToday.items || []).filter(x => x?.category && x?.title);
-
-        const eventsBox = document.getElementById('eventsBox');
-        if (!itemsToday.length) {
-          eventsBox.textContent = 'אין אירועים מיוחדים היום';
-        } else {
-          const ul = document.createElement('ul');
-          for (const it of itemsToday) {
-            // show only useful calendar-like categories (you can widen later)
-            if (
-              it.category === 'holiday' ||
-              it.category === 'parashat' ||
-              it.category === 'roshchodesh' ||
-              it.category === 'zmanim'
-            ) {
-              const li = document.createElement('li');
-              li.textContent = it.title;
-              ul.appendChild(li);
-            }
-          }
-          eventsBox.innerHTML = '';
-          eventsBox.appendChild(ul);
-        }
-
-        // ===== Month calendar =====
-        let viewYear, viewMonth; // month: 0..11
-
-        function iso(d){
-          const yy = d.getFullYear();
-          const mm = String(d.getMonth()+1).padStart(2,'0');
-          const dd = String(d.getDate()).padStart(2,'0');
-          return `${yy}-${mm}-${dd}`;
-        }
-
-        function startOfMonth(yy,mm){ return new Date(yy,mm,1); }
-        function endOfMonth(yy,mm){ return new Date(yy,mm+1,0); }
-
-        // JS: Sun=0..Sat=6 -> Mon=0..Sun=6
-        function mondayFirstIndex(jsDay){ return (jsDay + 6) % 7; }
-
-        async function renderMonth(yy, mm){
-          viewYear = yy; viewMonth = mm;
-
-          const first = startOfMonth(yy,mm);
-          const last  = endOfMonth(yy,mm);
-
-          // Month title (Hebrew UI)
-          document.getElementById('calTitle').textContent =
-            first.toLocaleDateString('he-IL', { month:'long', year:'numeric' });
-
-          // Fetch month events
-          const url =
-            `https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=on&mod=on&nx=on&mf=on&ss=on` +
-            `&start=${iso(first)}&end=${iso(last)}&lg=he&geo=geoname&geonameid=${geonameid}`;
-
-          const data = await (await fetch(url)).json();
-
-          // group by date YYYY-MM-DD
-          const byDate = {};
-          for(const it of (data.items || [])){
-            const d0 = (it.date || '').slice(0,10);
-            if(!d0) continue;
-
-            // keep only relevant categories for the month view
-            if(
-              it.category === 'holiday' ||
-              it.category === 'parashat' ||
-              it.category === 'roshchodesh'
-            ){
-              if(!byDate[d0]) byDate[d0] = [];
-              byDate[d0].push(it.title);
-            }
-          }
-
-          const grid = document.getElementById('calGrid');
-          grid.innerHTML = '';
-
-          const pad = mondayFirstIndex(first.getDay());
-          for(let i=0;i<pad;i++){
-            const cell = document.createElement('div');
-            cell.className = 'day muted';
-            grid.appendChild(cell);
-          }
-
-          const todayIso = iso(now);
-
-          for(let day=1; day<=last.getDate(); day++){
-            const d = new Date(yy,mm,day);
-            const dIso = iso(d);
-
-            const cell = document.createElement('div');
-            cell.className = 'day' + (dIso===todayIso ? ' todayMark' : '');
-
-            const num = document.createElement('div');
-            num.className = 'num';
-            num.textContent = day;
-            cell.appendChild(num);
-
-            const items = document.createElement('div');
-            items.className = 'items';
-
-            const arr = byDate[dIso] || [];
-            for(const t of arr.slice(0,3)){
-              const b = document.createElement('div');
-              b.className = 'badge';
-              b.textContent = t;
-              items.appendChild(b);
-            }
-
-            cell.appendChild(items);
-            grid.appendChild(cell);
-          }
-        }
-
-        document.getElementById('prevMonth').onclick = () => {
-          const d = new Date(viewYear, viewMonth-1, 1);
-          renderMonth(d.getFullYear(), d.getMonth());
-        };
-        document.getElementById('nextMonth').onclick = () => {
-          const d = new Date(viewYear, viewMonth+1, 1);
-          renderMonth(d.getFullYear(), d.getMonth());
-        };
-
-        await renderMonth(now.getFullYear(), now.getMonth());
-
-      } catch (err) {
-        console.error(err);
-        document.getElementById('eventsBox').textContent = 'שגיאה בטעינת נתונים';
-        document.getElementById('melachaStatus').textContent = 'שגיאה בטעינת נתונים';
-        document.getElementById('hebrewDate').textContent = 'שגיאה בטעינת נתונים';
+    for (const it of items) {
+      if (
+        it.category === 'holiday' ||
+        it.category === 'parashat' ||
+        it.category === 'roshchodesh'
+      ) {
+        const li = document.createElement('li');
+        li.textContent = it.title;
+        ul.appendChild(li);
       }
-    })();
-  </script>
-</body>
-</html>
+    }
+
+    // Render Ashkenazi MVP notes
+    for (const note of ashkenaziNotes) {
+      const li = document.createElement('li');
+      li.textContent = note;
+      ul.appendChild(li);
+    }
+
+    if (ul.children.length === 0) {
+      eventsBox.textContent = 'אין אירועים מיוחדים היום';
+    } else {
+      eventsBox.appendChild(ul);
+    }
+
+    // ====== Ashkenazi label (positioning) ======
+    const small = document.querySelector('.small');
+    if (small) {
+      small.textContent = 'לוח שנה יהודי — לפי מנהג אשכנז (MVP)';
+    }
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('eventsBox').textContent = 'שגיאה בטעינת נתונים';
+    document.getElementById('melachaStatus').textContent = 'שגיאה בטעינת נתונים';
+    document.getElementById('hebrewDate').textContent = 'שגיאה בטעינת נתונים';
+  }
+})();
+</script>
