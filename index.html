@@ -1,81 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>היום – לוח שנה עברי (אשכנז)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>לוח אשכנזי — היום</title>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
-      direction: rtl;
-    }
-    .card {
-      max-width: 420px;
-      margin: 40px auto;
-      background: white;
-      padding: 24px;
-      border-radius: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    h1 {
-      margin-top: 0;
-      font-size: 26px;
-    }
-    .date {
-      font-size: 20px;
-      margin: 16px 0;
-    }
-    .status {
-      font-size: 18px;
-      font-weight: bold;
-      margin: 18px 0;
-    }
-    .note {
-      font-size: 14px;
-      color: #555;
-      margin-top: 24px;
-      line-height: 1.4;
-    }
+    body { margin:0; font-family: Arial, sans-serif; background:#f2f2f2; direction: rtl; }
+    .wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+    .card { width:min(720px, 92vw); background:#fff; border-radius:16px; padding:24px 22px; box-shadow:0 12px 30px rgba(0,0,0,.10); }
+    h1 { margin:0 0 10px; font-size:34px; }
+    .date { font-size:22px; margin:6px 0 14px; color:#111; }
+    .status { font-size:20px; margin:10px 0 14px; font-weight:700; }
+    .ok { color:#0a7a2f; }
+    .no { color:#b00020; }
+    .events { margin-top:10px; padding:12px 14px; background:#fafafa; border-radius:12px; }
+    .events h2 { margin:0 0 8px; font-size:18px; }
+    ul { margin:0; padding-right:18px; }
+    li { margin:6px 0; }
+    .small { margin-top:14px; color:#666; font-size:13px; line-height:1.35; }
+    .loader { color:#666; }
   </style>
 </head>
 
 <body>
-  <div class="card">
-    <h1>היום</h1>
+  <div class="wrap">
+    <div class="card">
+      <h1>היום</h1>
 
-    <div class="date">
-      תאריך עברי – יוצג כאן
-    </div>
+      <!-- Дата -->
+      <div class="date" id="hebrewDate"><span class="loader">טוען תאריך…</span></div>
 
-    <div class="status">
-      סטטוס היום – יוצג כאן
-    </div>
+      <!-- Статус "можно/нельзя" -->
+      <div class="status" id="melachaStatus"><span class="loader">בודק סטטוס…</span></div>
 
-    <div class="note">
-      המידע כללי ולשם התמצאות בלבד.<br>
-      לשאלות הלכתיות – לפי רב או מנהג הקהילה.
+      <!-- События/праздники -->
+      <div class="events">
+        <h2>אירועים / חגים היום</h2>
+        <div id="eventsBox"><span class="loader">טוען…</span></div>
+      </div>
+
+      <div class="small">
+        הנתונים מגיעים מ־Hebcal. לבדיקה הלכתית—לפי רב / מנהג הקהילה.
+      </div>
     </div>
   </div>
-  <script>
-  const today = new Date();
 
-  const options = {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  };
+<script>
+(async function () {
+  // Локация: Ofakim (GeoNames ID 293992)
+  const geonameid = 293992;
 
-  const formattedDate = today.toLocaleDateString('he-IL', options);
+  // Сегодня (локально на компьютере)
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const dd = String(now.getDate()).padStart(2,'0');
+  const isoDate = `${yyyy}-${mm}-${dd}`;
 
-  const dateDiv = document.querySelector('.date');
-  if (dateDiv) {
-    dateDiv.textContent = formattedDate;
+  // 1) Еврейская дата (конвертер)
+  // https://www.hebcal.com/converter?cfg=json&date=YYYY-MM-DD&g2h=1&strict=1
+  const convUrl = `https://www.hebcal.com/converter?cfg=json&date=${isoDate}&g2h=1&strict=1`;
+  const conv = await (await fetch(convUrl)).json();
+
+  // conv.hebrew = "כ״ט בְּאִיָיר תשע״א" (пример)
+  document.getElementById('hebrewDate').textContent = conv.hebrew;
+
+  // 2) Асур мелаха сейчас? (берёт текущее локальное время в городе, если dt не передан)
+  // https://www.hebcal.com/zmanim?cfg=json&im=1&geonameid=XXXX
+  const imUrl = `https://www.hebcal.com/zmanim?cfg=json&im=1&geonameid=${geonameid}`;
+  const im = await (await fetch(imUrl)).json();
+
+  const isAssur = im?.status?.isAssurBemlacha === true;
+  const stEl = document.getElementById('melachaStatus');
+  if (isAssur) {
+    stEl.textContent = 'אסור מלאכה עכשיו';
+    stEl.className = 'status no';
+  } else {
+    stEl.textContent = 'מותר מלאכה עכשיו';
+    stEl.className = 'status ok';
   }
+
+  // 3) События/праздники на сегодня (Hebcal Jewish calendar API)
+  // Используем start/end на один день, язык Hebrew, Израиль (i=on)
+  const calUrl = `https://www.hebcal.com/hebcal?v=1&cfg=json&i=on&lg=he&geo=geonameid&geonameid=${geonameid}&start=${isoDate}&end=${isoDate}&maj=on&min=on&mod=on&nx=on&mf=on&ss=on`;
+  const cal = await (await fetch(calUrl)).json();
+
+  const items = (cal?.items || []).filter(x => x?.category && x?.title);
+  const eventsBox = document.getElementById('eventsBox');
+
+  if (!items.length) {
+    eventsBox.textContent = 'אין אירועים מיוחדים היום';
+  } else {
+    const ul = document.createElement('ul');
+    for (const it of items) {
+      const li = document.createElement('li');
+      li.textContent = it.title;
+      ul.appendChild(li);
+    }
+    eventsBox.innerHTML = '';
+    eventsBox.appendChild(ul);
+  }
+
+})().catch(err => {
+  console.error(err);
+  document.getElementById('eventsBox').textContent = 'שגיאה בטעינה. נסי לרענן את הדף.';
+  document.getElementById('melachaStatus').textContent = 'שגיאה בטעינה.';
+  document.getElementById('hebrewDate').textContent = 'שגיאה בטעינה.';
+});
 </script>
+
 </body>
 </html>
