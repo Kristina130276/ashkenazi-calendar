@@ -61,5 +61,21 @@
       לשאלות הלכתיות – לפי רב או מנהג הקהילה.
     </div>
   </div>
+  <script>
+  const today = new Date();
+
+  const options = {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  };
+
+  const formattedDate = today.toLocaleDateString('he-IL', options);
+
+  const dateDiv = document.querySelector('.date');
+  if (dateDiv) {
+    dateDiv.textContent = formattedDate;
+  }
+</script>
 </body>
 </html>
