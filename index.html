@@ -2,8 +2,9 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>לוח שנה עברי</title>
+
   <style>
     :root{
       --bg:#f5f6f7;
@@ -11,497 +12,165 @@
       --text:#1b1f24;
       --muted:#6b7280;
       --border:#e5e7eb;
-      --shadow: 0 20px 60px rgba(0,0,0,.08);
+      --shadow:0 20px 60px rgba(0,0,0,.08);
       --radius:18px;
     }
+
+    *{ box-sizing:border-box; }
+
     body{
       margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
     }
-    .wrap{
-      max-width: 1100px;
-      margin: 28px auto;
-      padding: 0 16px;
-    }
-    .layout{
-      display:grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: 18px;
-      align-items: start;
-    }
-    .card{
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .card-inner{ padding: 18px; }
 
-    /* Month header */
-    .month-head{
+    /* ===== LAYOUT ===== */
+    .app{
+      max-width:1200px;
+      margin:0 auto;
+      padding:20px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:20px;
+      align-items:start;
+    }
+
+    .panel{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(12px);
+    }
+
+    /* ===== MONTH ===== */
+    .month-header{
       display:flex;
       align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
+      justify-content:space-between;
+      margin-bottom:14px;
+      font-weight:600;
+      font-size:20px;
     }
-    .month-title{
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: .2px;
-    }
-    .navbtn{
-      border:1px solid var(--border);
-      background:#fff;
-      border-radius: 12px;
-      padding: 8px 10px;
-      cursor:pointer;
-      font-size: 16px;
-      line-height: 1;
-    }
-    .navbtn:active{ transform: translateY(1px); }
 
-    /* Grid */
-    .dow{
+    .month-grid{
       display:grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-      margin: 10px 0 8px;
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 13px;
+      grid-template-columns:repeat(7,1fr);
+      gap:10px;
     }
-    .dow div{ text-align:center; }
 
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-    }
     .day{
       border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      min-height:70px;
+      font-size:15px;
       background:#fff;
-      border-radius: 14px;
-      min-height: 74px;
-      padding: 10px 10px 8px;
-      cursor:pointer;
-      position:relative;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .day:hover{ outline: 2px solid rgba(0,0,0,.06); }
-    .day.muted{
-      opacity:.45;
-      background:#fff;
-      cursor: default;
-    }
-    .num{
-      font-weight:700;
-      font-size:16px;
-      text-align:left; /* RTL page, but number visually nicer left inside cell */
-      direction:ltr;
-    }
-    .badges{
-      display:flex;
-      flex-wrap: wrap;
-      gap:6px;
-      justify-content: flex-start;
-      direction:ltr;
-    }
-    .dot{
-      width:8px;height:8px;border-radius:99px;
-      background:#9ca3af;
-      display:inline-block;
     }
 
-    .day.selected{
-      outline: 3px solid rgba(17,24,39,.22);
-    }
     .day.today{
-      border-color:#11182755;
-    }
-
-    /* Right panel */
-    .right h1{
-      margin:0;
-      font-size: 34px;
-      font-weight: 800;
-      text-align:right;
-    }
-    .right .date-line{
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 18px;
-      direction:ltr;
-      text-align:left;
-    }
-    .right .hebrew{
-      margin-top: 10px;
-      font-size: 20px;
-      font-weight: 700;
-      color:#111827;
-    }
-    .right .sub{
-      margin-top: 10px;
-      color:#374151;
-      font-weight: 650;
-    }
-    .list{
-      margin-top: 10px;
-      padding: 0;
-      list-style: none;
-    }
-    .list li{
-      border-top: 1px dashed var(--border);
-      padding: 10px 0;
-      display:flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: baseline;
-      font-size: 15px;
-    }
-    .list .k{
-      color:#111827;
-      font-weight:650;
-    }
-    .list .v{
-      color:#374151;
+      border:2px solid #111;
       font-weight:600;
-      direction:ltr;
-      text-align:left;
-      white-space: nowrap;
-    }
-    .foot{
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 12px;
     }
 
-    /* Mobile */
-    @media (max-width: 900px){
-      .layout{ grid-template-columns: 1fr; }
-      .right h1{ font-size: 28px; }
-      .day{ min-height: 64px; }
+    /* ===== TODAY ===== */
+    .today-title{
+      font-size:22px;
+      font-weight:700;
+      margin-bottom:10px;
+    }
+
+    .today-date{
+      color:var(--muted);
+      margin-bottom:12px;
+    }
+
+    .today-row{
+      display:flex;
+      justify-content:space-between;
+      padding:8px 0;
+      border-bottom:1px dashed var(--border);
+      font-size:15px;
+    }
+
+    /* ===== MOBILE ===== */
+    @media (max-width:768px){
+      .app{
+        grid-template-columns:1fr;
+        padding:14px;
+      }
+      .panel{ padding:14px; }
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="layout">
-      <!-- LEFT: month -->
-      <div class="card">
-        <div class="card-inner">
-          <div class="month-head">
-            <button class="navbtn" id="prevBtn" aria-label="Prev month">‹</button>
-            <div class="month-title" id="monthTitle">—</div>
-            <button class="navbtn" id="nextBtn" aria-label="Next month">›</button>
-          </div>
 
-          <div class="dow">
-            <div>א׳</div><div>ב׳</div><div>ג׳</div><div>ד׳</div><div>ה׳</div><div>ו׳</div><div>ש׳</div>
-          </div>
+<div class="app">
 
-          <div class="grid" id="grid"></div>
-        </div>
-      </div>
+  <!-- TODAY -->
+  <div class="panel" id="today-panel">
+    <div class="today-title">היום</div>
+    <div class="today-date">07.02.2026 · כ׳ בשבט תשפ״ו</div>
 
-      <!-- RIGHT: today -->
-      <div class="card right">
-        <div class="card-inner">
-          <h1 id="rightTitle">היום</h1>
-          <div class="date-line" id="gregLine">—</div>
-          <div class="hebrew" id="hebLine">—</div>
+    <div class="today-row">
+      <span>פרשה</span><span>יתרו</span>
+    </div>
+    <div class="today-row">
+      <span>הבדלה</span><span>17:59</span>
+    </div>
+    <div class="today-row">
+      <span>אירוע</span><span>—</span>
+    </div>
 
-          <div class="sub" id="eventsTitle">אירועים / זמני שבת</div>
-          <ul class="list" id="eventsList"></ul>
-
-          <div class="foot">הנתונים מגיעים מ־Hebcal (מיקום: אופקים / Israel)</div>
-        </div>
-      </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+      הנתונים מחושבים לפי Israel · Hebcal
     </div>
   </div>
 
-<script>
-(async function(){
-  // ===== Settings =====
-  const geonameid = 293992; // Ofakim
-  const localeHebMonth = new Intl.DateTimeFormat('he-IL', { month:'long', year:'numeric' });
-  const pad2 = (n)=> String(n).padStart(2,'0');
-  const toISO = (d)=> `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-  const toDMY = (d)=> `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.${d.getFullYear()}`;
+  <!-- MONTH -->
+  <div class="panel" id="month-panel">
+    <div class="month-header">
+      <span>פברואר 2026</span>
+    </div>
 
-  // ===== State =====
-  const now = new Date();
-  let viewY = now.getFullYear();
-  let viewM = now.getMonth(); // 0-11
-  let selected = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    <div class="month-grid">
+      <div class="day">1</div>
+      <div class="day">2</div>
+      <div class="day">3</div>
+      <div class="day">4</div>
+      <div class="day">5</div>
+      <div class="day">6</div>
+      <div class="day today">7</div>
 
-  // Map: yyyy-mm-dd -> { events:[], candles:'', havdalah:'', parasha:'' }
-  let monthMap = new Map();
+      <div class="day">8</div>
+      <div class="day">9</div>
+      <div class="day">10</div>
+      <div class="day">11</div>
+      <div class="day">12</div>
+      <div class="day">13</div>
+      <div class="day">14</div>
 
-  // ===== DOM =====
-  const gridEl = document.getElementById('grid');
-  const monthTitleEl = document.getElementById('monthTitle');
-  const rightTitleEl = document.getElementById('rightTitle');
-  const gregLineEl = document.getElementById('gregLine');
-  const hebLineEl = document.getElementById('hebLine');
-  const eventsListEl = document.getElementById('eventsList');
+      <div class="day">15</div>
+      <div class="day">16</div>
+      <div class="day">17</div>
+      <div class="day">18</div>
+      <div class="day">19</div>
+      <div class="day">20</div>
+      <div class="day">21</div>
 
-  document.getElementById('prevBtn').onclick = ()=> { changeMonth(-1); };
-  document.getElementById('nextBtn').onclick = ()=> { changeMonth(+1); };
+      <div class="day">22</div>
+      <div class="day">23</div>
+      <div class="day">24</div>
+      <div class="day">25</div>
+      <div class="day">26</div>
+      <div class="day">27</div>
+      <div class="day">28</div>
+    </div>
+  </div>
 
-  // ===== Data fetch =====
-  async function fetchMonthData(y, m){
-    monthMap = new Map();
+</div>
 
-    // 1) Holidays/events for the month
-    // i=on => Israel holiday scheme
-    const monthNum = m + 1;
-    const urlEvents =
-      `https://www.hebcal.com/hebcal?cfg=json&v=1&year=${y}&month=${monthNum}` +
-      `&i=on&maj=on&min=on&mod=on&nx=on&mf=on&ss=on&c=on` +
-      `&geo=geoname&geonameid=${geonameid}`;
-
-    // 2) Shabbat times (candles/havdalah/parashat)
-    const urlShabbat =
-      `https://www.hebcal.com/shabbat?cfg=json&m=50&geonameid=${geonameid}&year=${y}&month=${monthNum}`;
-
-    const [ev, sh] = await Promise.all([
-      fetch(urlEvents).then(r=>r.json()),
-      fetch(urlShabbat).then(r=>r.json())
-    ]);
-
-    // Helper: ensure day record
-    const ensure = (iso)=>{
-      if(!monthMap.has(iso)){
-        monthMap.set(iso, { events:[], candles:null, havdalah:null, parasha:null });
-      }
-      return monthMap.get(iso);
-    };
-
-    // Parse month events
-    if (ev && Array.isArray(ev.items)) {
-      for (const it of ev.items){
-        if(!it || !it.date) continue;
-        const iso = it.date.slice(0,10);
-        const rec = ensure(iso);
-
-        // Use Hebrew title if present; fallback to English
-        const title = it.hebrew || it.title || '';
-        const cat = it.category || '';
-
-        // Skip purely "roshchodesh" duplicates? keep them, but compact later
-        if(title){
-          rec.events.push({ title, cat });
-        }
-      }
-    }
-
-    // Parse shabbat list
-    if (sh && Array.isArray(sh.items)) {
-      for (const it of sh.items){
-        if(!it || !it.date) continue;
-        const iso = it.date.slice(0,10);
-        const rec = ensure(iso);
-
-        const cat = it.category || '';
-        if(cat === 'candles') rec.candles = it.title || null;  // includes time in title
-        if(cat === 'havdalah') rec.havdalah = it.title || null;
-        if(cat === 'parashat') rec.parasha = it.hebrew || it.title || null;
-      }
-    }
-  }
-
-  // Hebrew date for selected day (converter)
-  async function fetchHebrewDate(iso){
-    const url = `https://www.hebcal.com/converter?cfg=json&date=${iso}&g2h=1&strict=1`;
-    const j = await fetch(url).then(r=>r.json());
-    // Prefer hebrew string if available
-    return (j && (j.hebrew || j.hd)) ? (j.hebrew || j.hd) : '—';
-  }
-
-  // ===== Render =====
-  function renderMonth(){
-    const first = new Date(viewY, viewM, 1);
-    const last = new Date(viewY, viewM + 1, 0);
-
-    // Title in Hebrew (month + year)
-    monthTitleEl.textContent = localeHebMonth.format(first);
-
-    // Grid starts on Sunday (0)
-    const startDow = first.getDay(); // 0 Sun ... 6 Sat
-    const daysInMonth = last.getDate();
-
-    gridEl.innerHTML = '';
-
-    // Fill leading blanks
-    for(let i=0;i<startDow;i++){
-      const blank = document.createElement('div');
-      blank.className = 'day muted';
-      blank.style.visibility = 'hidden';
-      gridEl.appendChild(blank);
-    }
-
-    for(let d=1; d<=daysInMonth; d++){
-      const dateObj = new Date(viewY, viewM, d);
-      const iso = toISO(dateObj);
-
-      const cell = document.createElement('div');
-      cell.className = 'day';
-
-      // today
-      if(toISO(dateObj) === toISO(new Date(now.getFullYear(), now.getMonth(), now.getDate()))){
-        cell.classList.add('today');
-      }
-      // selected
-      if(toISO(dateObj) === toISO(selected)){
-        cell.classList.add('selected');
-      }
-
-      const num = document.createElement('div');
-      num.className = 'num';
-      num.textContent = d;
-
-      const badges = document.createElement('div');
-      badges.className = 'badges';
-
-      const rec = monthMap.get(iso);
-      const hasAny =
-        rec && (
-          (rec.events && rec.events.length) ||
-          rec.candles || rec.havdalah || rec.parasha
-        );
-
-      // Simple indicator dot if there are events
-      if(hasAny){
-        const dot = document.createElement('span');
-        dot.className = 'dot';
-        badges.appendChild(dot);
-      }
-
-      cell.appendChild(num);
-      cell.appendChild(badges);
-
-      cell.onclick = ()=>{
-        selected = new Date(viewY, viewM, d);
-        renderMonth();        // refresh selection highlight
-        renderRight();        // refresh right panel
-      };
-
-      gridEl.appendChild(cell);
-    }
-  }
-
-  function cleanEventTitles(arr){
-    // remove duplicates by (title)
-    const seen = new Set();
-    const out = [];
-    for(const e of arr){
-      const t = (e.title || '').trim();
-      if(!t) continue;
-      if(seen.has(t)) continue;
-      seen.add(t);
-      out.push(t);
-    }
-    return out;
-  }
-
-  async function renderRight(){
-    const iso = toISO(selected);
-    const isToday = iso === toISO(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
-
-    rightTitleEl.textContent = isToday ? 'היום' : 'יום';
-    gregLineEl.textContent = toDMY(selected);
-
-    // Hebrew date
-    try{
-      hebLineEl.textContent = await fetchHebrewDate(iso);
-    }catch(e){
-      hebLineEl.textContent = '—';
-    }
-
-    // Events
-    eventsListEl.innerHTML = '';
-    const rec = monthMap.get(iso);
-
-    const addRow = (k, v)=>{
-      if(!v) return;
-      const li = document.createElement('li');
-      const kk = document.createElement('span'); kk.className='k'; kk.textContent = k;
-      const vv = document.createElement('span'); vv.className='v'; vv.textContent = v;
-      li.appendChild(kk); li.appendChild(vv);
-      eventsListEl.appendChild(li);
-    };
-
-    if(!rec){
-      addRow('אירועים', '—');
-      return;
-    }
-
-    // Parasha (if any)
-    addRow('פרשה', rec.parasha);
-
-    // Candle lighting / Havdalah: titles include time, keep them
-    // Example: "Candle lighting: 17:59"
-    if(rec.candles) addRow('הדלקת נרות', extractTime(rec.candles) || rec.candles);
-    if(rec.havdalah) addRow('הבדלה', extractTime(rec.havdalah) || rec.havdalah);
-
-    // Holidays / events list (compact)
-    const titles = cleanEventTitles(rec.events || []);
-    if(titles.length){
-      // Show up to 6 lines to keep it clean
-      const max = 6;
-      for(let i=0;i<Math.min(max, titles.length); i++){
-        addRow('אירוע', titles[i]);
-      }
-      if(titles.length > max){
-        addRow('עוד', `+${titles.length - max}`);
-      }
-    } else {
-      addRow('אירועים', '—');
-    }
-  }
-
-  function extractTime(s){
-    // tries to get HH:MM from string
-    const m = String(s).match(/\b([01]\d|2[0-3]):([0-5]\d)\b/);
-    return m ? `${m[1]}:${m[2]}` : null;
-  }
-
-  async function changeMonth(delta){
-    viewM += delta;
-    if(viewM < 0){ viewM = 11; viewY -= 1; }
-    if(viewM > 11){ viewM = 0; viewY += 1; }
-
-    // keep selected inside viewed month if it was outside
-    if(selected.getFullYear() !== viewY || selected.getMonth() !== viewM){
-      selected = new Date(viewY, viewM, 1);
-    }
-
-    await loadAndRender();
-  }
-
-  async function loadAndRender(){
-    // Small fallback: show something even if API hiccups
-    monthTitleEl.textContent = '...';
-    gridEl.innerHTML = '';
-    try{
-      await fetchMonthData(viewY, viewM);
-    }catch(e){
-      // if API fails: still render empty month
-      monthMap = new Map();
-    }
-    renderMonth();
-    renderRight();
-  }
-
-  // ===== Start =====
-  await loadAndRender();
-})();
-</script>
 </body>
 </html>
