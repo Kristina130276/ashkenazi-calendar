@@ -1,119 +1,132 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>לוח שנה עברי</title>
+  <meta charset="UTF-8" />
+  <title>לוח שנה יהודי – Ashkenazi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<style>
-  body{
-    margin:0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background:#f2f3f5;
-  }
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 24px;
+    }
 
-  .layout{
-    display:flex;
-    gap:24px;
-    padding:24px;
-    justify-content:center;
-    align-items:flex-start;
-    flex-wrap:wrap;
-  }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
 
-  .panel{
-    background:#fff;
-    border-radius:16px;
-    padding:20px;
-    box-shadow:0 12px 30px rgba(0,0,0,.12);
-  }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
 
-  .calendar{
-    width:min(720px, 95vw);
-  }
+    h2 {
+      margin-top: 0;
+      font-size: 22px;
+    }
 
-  .today{
-    width:min(420px, 95vw);
-    direction:rtl;
-    text-align:right;
-  }
+    .date {
+      font-size: 16px;
+      color: #555;
+    }
 
-  h2{
-    margin-top:0;
-  }
+    .highlight {
+      color: #b91c1c;
+      font-weight: 600;
+      margin-top: 8px;
+    }
 
-  .today-date{
-    font-size:22px;
-    font-weight:600;
-    margin-bottom:8px;
-  }
+    ul {
+      padding: 0;
+      margin: 12px 0 0;
+      list-style: none;
+    }
 
-  .today-heb{
-    font-size:18px;
-    margin-bottom:8px;
-  }
+    li {
+      margin-bottom: 6px;
+    }
 
-  .holiday{
-    color:#b3261e;
-    font-weight:600;
-    margin-bottom:12px;
-  }
-
-  .small{
-    color:#666;
-    font-size:14px;
-  }
-
-  iframe{
-    width:100%;
-    height:420px;
-    border:none;
-    border-radius:12px;
-  }
-</style>
+    @media (max-width: 800px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="layout">
+<div class="container">
 
-  <!-- ЛЕВЫЙ БЛОК: КАЛЕНДАРЬ -->
-  <div class="panel calendar">
-    <iframe 
-      src="https://www.hebcal.com/hebcal/?v=1&year=now&month=x&maj=on&min=on&mod=on&nx=on&ss=on&mf=on&c=on&geo=geoname&geonameid=293992&lg=he">
-    </iframe>
+  <!-- ЛЕВЫЙ БЛОК: МЕСЯЦ -->
+  <div class="card">
+    <h2>לוח חודש</h2>
+    <div id="monthInfo">טוען…</div>
   </div>
 
   <!-- ПРАВЫЙ БЛОК: СЕГОДНЯ -->
-  <div class="panel today">
+  <div class="card">
     <h2>היום</h2>
+    <div class="date" id="gregorianDate"></div>
+    <div class="date" id="hebrewDate"></div>
+    <div class="highlight" id="holiday"></div>
 
-    <div class="today-date" id="gdate"></div>
-    <div class="today-heb" id="hdate"></div>
-    <div class="holiday" id="holiday"></div>
-    <div class="small" id="sun"></div>
-    <div class="small">הנתונים מאתר Hebcal</div>
+    <ul id="events"></ul>
+    <div class="date" id="shabbat"></div>
   </div>
 
 </div>
 
 <script>
-(async ()=>{
+(async function () {
+
   const now = new Date();
   const yyyy = now.getFullYear();
-  const mm = String(now.getMonth()+1).padStart(2,'0');
-  const dd = String(now.getDate()).padStart(2,'0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const isoDate = `${yyyy}-${mm}-${dd}`;
 
-  document.getElementById("gdate").textContent = `${dd}.${mm}.${yyyy}`;
+  // DD.MM.YYYY (НЕ русский)
+  document.getElementById('gregorianDate').textContent =
+    `${dd}.${mm}.${yyyy}`;
 
-  const url = `https://www.hebcal.com/converter?cfg=json&date=${yyyy}-${mm}-${dd}&geo=geoname&geonameid=293992&lg=he`;
-  const data = await fetch(url).then(r=>r.json());
+  const url = `https://www.hebcal.com/converter?cfg=json&date=${isoDate}&g2h=1&strict=1&lg=he&geo=geoname&geonameid=293992`;
 
-  document.getElementById("hdate").textContent = data.hebrew;
-  document.getElementById("holiday").textContent =
-    data.events?.find(e=>e.category==="holiday")?.title || "—";
+  const data = await fetch(url).then(r => r.json());
 
-  document.getElementById("sun").textContent =
-    data.sunset ? `שקיעה: ${data.sunset}` : "";
+  document.getElementById('hebrewDate').textContent = data.hebrew;
+
+  if (data.holidays?.length) {
+    document.getElementById('holiday').textContent =
+      data.holidays.map(h => h.title).join(', ');
+  }
+
+  if (data.events?.length) {
+    const ul = document.getElementById('events');
+    data.events.forEach(e => {
+      const li = document.createElement('li');
+      li.textContent = e.title;
+      ul.appendChild(li);
+    });
+  }
+
+  if (data.candles?.length) {
+    document.getElementById('shabbat').textContent =
+      `כניסת שבת: ${data.candles[0].time}`;
+  }
+
+  // МЕСЯЦ (кратко)
+  document.getElementById('monthInfo').textContent =
+    `${data.hm} ${data.hy}`;
+
 })();
 </script>
 
