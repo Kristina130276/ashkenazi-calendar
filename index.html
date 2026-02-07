@@ -26,6 +26,7 @@
   <div class="wrap">
     <div class="card">
       <h1>היום</h1>
+<div id="gregorian-date" style="font-size:18px; margin-bottom:10px; color:#555;"></div>
 
       <!-- Дата -->
       <div class="date" id="hebrewDate"><span class="loader">טוען תאריך…</span></div>
@@ -100,7 +101,11 @@
     eventsBox.innerHTML = '';
     eventsBox.appendChild(ul);
   }
-
+// ===== Gregorian date =====
+const today = new Date();
+const options = { day: 'numeric', month: 'long', year: 'numeric' };
+const gregorianDate = today.toLocaleDateString('he-IL', options);
+document.getElementById('gregorian-date').textContent = gregorianDate;
 })().catch(err => {
   console.error(err);
   document.getElementById('eventsBox').textContent = 'שגיאה בטעינה. נסי לרענן את הדף.';
