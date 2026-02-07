@@ -53,6 +53,13 @@
 
   // Сегодня (локально на компьютере)
   const now = new Date();
+  // ===== Gregorian date (DD.MM.YYYY) =====
+const d = String(now.getDate()).padStart(2, '0');
+const m = String(now.getMonth() + 1).padStart(2, '0');
+const y = now.getFullYear();
+
+document.getElementById('gregorian-date').textContent = `${d}.${m}.${y}`;
+
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth()+1).padStart(2,'0');
   const dd = String(now.getDate()).padStart(2,'0');
