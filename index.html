@@ -1,310 +1,68 @@
-<!doctype html>
-<html lang="he" dir="rtl">
+<!DOCTYPE html>
+<html lang="he">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>לוח יהודי — היום + חודש</title>
+  <meta charset="UTF-8" />
+  <title>Calendar</title>
   <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#f2f2f2; direction:rtl; }
-    .wrap { min-height:100vh; display:flex; gap:24px; align-items:flex-start; justify-content:center; padding:24px; flex-wrap:wrap; }
-    .panel { background:#fff; border-radius:16px; padding:18px; box-shadow:0 12px 30px rgba(0,0,0,.10); }
-
-    /* Right card */
-    .card { width:min(720px, 92vw); }
-    h1 { margin:0 0 10px; font-size:34px; }
-    .gdate { font-size:18px; color:#555; margin:0 0 10px; }
-    .date { font-size:22px; margin:6px 0 14px; color:#111; }
-    .status { font-size:20px; margin:10px 0 14px; font-weight:700; }
-    .ok { color:#0a7a2f; }
-    .no { color:#b00020; }
-
-    .events { margin-top:10px; padding:12px 14px; background:#fafafa; border-radius:12px; }
-    .events h2 { margin:0 0 8px; font-size:18px; }
-    ul { margin:0; padding-right:18px; }
-    li { margin:6px 0; }
-
-    .small { margin-top:14px; color:#666; font-size:13px; line-height:1.35; }
-
-    /* Left month calendar */
-    .month { width:min(520px, 92vw); }
-    .monthHead { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-    .monthTitle { font-size:20px; font-weight:700; }
-    .btn { border:0; background:#eee; border-radius:10px; padding:8px 10px; cursor:pointer; }
-    .btn:active { transform: translateY(1px); }
-
-    .dow { display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; margin:10px 0 8px; color:#666; font-size:12px; }
-    .grid { display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; }
-    .cell { background:#fff; border:1px solid #eee; border-radius:12px; min-height:66px; padding:8px; position:relative; }
-    .cell.muted { background:#fafafa; color:#aaa; }
-    .dayNum { font-weight:700; font-size:14px; }
-    .today { outline:2px solid #111; outline-offset:2px; }
-    .badge { margin-top:6px; font-size:11px; color:#333; line-height:1.2; white-space:pre-line; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background: white;
+      padding: 24px 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: right;
+      min-width: 320px;
+    }
+    .date {
+      font-size: 18px;
+      color: #666;
+      text-align: left;
+    }
+    .today {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+    .hebrew {
+      font-size: 16px;
+      color: #444;
+    }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <!-- LEFT: Month calendar -->
-    <div class="panel month">
-      <div class="monthHead">
-        <button class="btn" id="prevBtn">‹</button>
-        <div class="monthTitle" id="monthTitle">טוען…</div>
-        <button class="btn" id="nextBtn">›</button>
-      </div>
-
-      <div class="dow">
-        <div>א</div><div>ב</div><div>ג</div><div>ד</div><div>ה</div><div>ו</div><div>שבת</div>
-      </div>
-
-      <div class="grid" id="monthGrid">
-        <div class="cell muted">טוען…</div>
-      </div>
-    </div>
-
-    <!-- RIGHT: Today card -->
-    <div class="panel card">
-      <h1>היום</h1>
-      <div class="gdate" id="gregorianDate">טוען…</div>
-
-      <div class="date" id="hebrewDate"><span class="loader">טוען…</span></div>
-
-      <div class="status" id="melachaStatus"><span class="loader">בודק…</span></div>
-
-      <div class="events">
-        <h2>אירועים / חגים היום</h2>
-        <div id="eventsBox"><span class="loader">טוען…</span></div>
-        <div id="havdalahBox" style="margin-top:10px; color:#333; font-size:14px;"></div>
-      </div>
-
-      <div class="small">
-        הנתונים מגיעים מ־Hebcal. (מיקום: אופקים / Israel)
-      </div>
-    </div>
+  <div class="card">
+    <div class="today">היום</div>
+    <div id="gregorian" class="date"></div>
+    <div id="hebrew" class="hebrew"></div>
   </div>
 
-<script>
-(async function () {
-  const geonameid = 293992; // Ofakim
-  const TZ = 'Asia/Jerusalem';
+  <script>
+    const now = new Date();
 
-  // ---------- helpers ----------
-  function pad2(n){ return String(n).padStart(2,'0'); }
+    // Gregorian date: 07.02.2026
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
 
-  function jerusalemParts(dateObj = new Date()) {
-    const fmt = new Intl.DateTimeFormat('en-GB', {
-      timeZone: TZ, year:'numeric', month:'2-digit', day:'2-digit'
-    });
-    const parts = fmt.formatToParts(dateObj);
-    const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
-    return { y: map.year, m: map.month, d: map.day };
-  }
+    document.getElementById("gregorian").textContent =
+      `${dd}.${mm}.${yyyy}`;
 
-  function isoFromParts(p){ return `${p.y}-${p.m}-${p.d}`; }
-  function ddmmyyyyFromParts(p){ return `${p.d}.${p.m}.${p.y}`; }
+    // Hebrew date
+    const hebrewDate = new Intl.DateTimeFormat('he-u-ca-hebrew', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(now);
 
-  function monthTitle(dateObj){
-    return new Intl.DateTimeFormat('he-IL', { timeZone: TZ, month:'long', year:'numeric' }).format(dateObj);
-  }
-
-  function dateFromYMD(y, m, d){
-    // m is 1-12
-    return new Date(Date.UTC(Number(y), Number(m)-1, Number(d), 12, 0, 0));
-  }
-
-  function addMonthsUTC(dateObj, delta){
-    const y = dateObj.getUTCFullYear();
-    const m = dateObj.getUTCMonth();
-    const d = dateObj.getUTCDate();
-    return new Date(Date.UTC(y, m + delta, d, 12, 0, 0));
-  }
-
-  // ---------- TODAY (right card) ----------
-  const todayParts = jerusalemParts(new Date());
-  const isoToday = isoFromParts(todayParts);
-
-  // Gregorian date: DD.MM.YYYY (no Russian)
-  document.getElementById('gregorianDate').textContent = ddmmyyyyFromParts(todayParts);
-
-  // Hebrew date (converter)
-  try {
-    const convUrl = `https://www.hebcal.com/converter?cfg=json&date=${isoToday}&strict=1&lg=he`;
-    const conv = await (await fetch(convUrl)).json();
-    document.getElementById('hebrewDate').textContent = conv.hebrew || '—';
-  } catch(e) {
-    document.getElementById('hebrewDate').textContent = 'שגיאה בטעינת תאריך';
-  }
-
-  // Melacha now? + Havdalah time if exists
-  try {
-    const zmanimUrl = `https://www.hebcal.com/zmanim?cfg=json&geonameid=${geonameid}`;
-    const z = await (await fetch(zmanimUrl)).json();
-
-    const isAssur =
-      (z && z.status && (z.status.isAssurBemelacha === true || z.status.isAssurBemelacha === "true")) ||
-      (z && z.isAssurBemelacha === true);
-
-    const st = document.getElementById('melachaStatus');
-    if (isAssur) {
-      st.textContent = 'אסור מלאכה עכשיו';
-      st.className = 'status no';
-    } else {
-      st.textContent = 'מותרת מלאכה עכשיו';
-      st.className = 'status ok';
-    }
-
-    // Havdalah time (if present)
-    const hav = (z && z.times && (z.times.havdalah || z.times.havdalah_72)) ? (z.times.havdalah || z.times.havdalah_72) : null;
-    const havBox = document.getElementById('havdalahBox');
-    if (hav) {
-      // show HH:MM from ISO-like string
-      const t = new Date(hav);
-      const hhmm = new Intl.DateTimeFormat('he-IL', { timeZone: TZ, hour:'2-digit', minute:'2-digit' }).format(t);
-      havBox.textContent = `הבדלה: ${hhmm}`;
-    } else {
-      havBox.textContent = '';
-    }
-  } catch(e) {
-    document.getElementById('melachaStatus').textContent = 'שגיאה בטעינה';
-  }
-
-  // Events today
-  try {
-    const calUrl = `https://www.hebcal.com/hebcal?v=1&cfg=json&lg=he&i=on&maj=on&min=on&mod=on&nx=on&mf=on&ss=on&c=on&geo=geoname&geonameid=${geonameid}&start=${isoToday}&end=${isoToday}`;
-    const cal = await (await fetch(calUrl)).json();
-    const items = (cal.items || []).filter(x => x && x.title && x.category);
-
-    const box = document.getElementById('eventsBox');
-    if (!items.length) {
-      box.textContent = 'אין אירועים מיוחדים היום';
-    } else {
-      const ul = document.createElement('ul');
-      for (const it of items) {
-        const li = document.createElement('li');
-        li.textContent = it.title;
-        ul.appendChild(li);
-      }
-      box.innerHTML = '';
-      box.appendChild(ul);
-    }
-  } catch(e) {
-    document.getElementById('eventsBox').textContent = 'שגיאה בטעינת אירועים';
-  }
-
-  // ---------- MONTH calendar (left) ----------
-  // We keep "current view month" as a UTC date pointing to the 15th to avoid edge issues
-  let viewMonth = dateFromYMD(todayParts.y, todayParts.m, 15);
-
-  async function loadMonth() {
-    // Title
-    document.getElementById('monthTitle').textContent = monthTitle(viewMonth);
-
-    const y = viewMonth.getUTCFullYear();
-    const m = viewMonth.getUTCMonth() + 1; // 1-12
-
-    // Start/end of month
-    const first = dateFromYMD(y, m, 1);
-    const last = dateFromYMD(y, m + 1, 0); // day 0 of next month = last day of this month
-
-    const startParts = { y: String(y), m: pad2(m), d: '01' };
-    const endParts = { y: String(last.getUTCFullYear()), m: pad2(last.getUTCMonth()+1), d: pad2(last.getUTCDate()) };
-    const startISO = isoFromParts(startParts);
-    const endISO = isoFromParts(endParts);
-
-    // Fetch month events (Hebrew)
-    let byDate = {};
-    try {
-      const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&lg=he&i=on&maj=on&min=on&mod=on&nx=on&mf=on&ss=on&c=on&geo=geoname&geonameid=${geonameid}&start=${startISO}&end=${endISO}`;
-      const data = await (await fetch(url)).json();
-      const items = (data.items || []).filter(x => x && x.date && x.title && x.category);
-
-      for (const it of items) {
-        const d = it.date; // YYYY-MM-DD or YYYY-MM-DDTHH...
-        const key = d.slice(0,10);
-        if (!byDate[key]) byDate[key] = [];
-        // keep short unique titles
-        if (!byDate[key].includes(it.title)) byDate[key].push(it.title);
-      }
-    } catch(e) {
-      // if fail, still render calendar grid without events
-      byDate = {};
-    }
-
-    // Build grid
-    const grid = document.getElementById('monthGrid');
-    grid.innerHTML = '';
-
-    // Determine weekday (Sunday=0..Saturday=6) for 1st day IN JERUSALEM.
-    // Approximation: use UTC noon for date, then compute weekday in Jerusalem using Intl.
-    const weekdayFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday:'short' });
-    const mapW = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
-    const firstW = mapW[weekdayFmt.format(first)];
-
-    // In RTL hebrew calendar we want week start Sunday (א) to Saturday (שבת)
-    // Add empty cells before day 1
-    for (let i=0; i<firstW; i++) {
-      const c = document.createElement('div');
-      c.className = 'cell muted';
-      grid.appendChild(c);
-    }
-
-    const daysInMonth = last.getUTCDate();
-    for (let day=1; day<=daysInMonth; day++) {
-      const p = { y:String(y), m:pad2(m), d:pad2(day) };
-      const key = isoFromParts(p);
-
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-
-      // highlight today
-      if (key === isoToday) cell.classList.add('today');
-
-      const num = document.createElement('div');
-      num.className = 'dayNum';
-      num.textContent = String(day);
-      cell.appendChild(num);
-
-      const ev = byDate[key];
-      if (ev && ev.length) {
-        const b = document.createElement('div');
-        b.className = 'badge';
-        // show up to 3 lines
-        b.textContent = ev.slice(0,3).join('\n');
-        cell.appendChild(b);
-      }
-
-      grid.appendChild(cell);
-    }
-
-    // trailing cells to complete the last week (optional, for clean grid)
-    const totalCells = grid.children.length;
-    const remainder = totalCells % 7;
-    if (remainder !== 0) {
-      const add = 7 - remainder;
-      for (let i=0; i<add; i++) {
-        const c = document.createElement('div');
-        c.className = 'cell muted';
-        grid.appendChild(c);
-      }
-    }
-  }
-
-  document.getElementById('prevBtn').addEventListener('click', async () => {
-    viewMonth = addMonthsUTC(viewMonth, -1);
-    await loadMonth();
-  });
-
-  document.getElementById('nextBtn').addEventListener('click', async () => {
-    viewMonth = addMonthsUTC(viewMonth, +1);
-    await loadMonth();
-  });
-
-  await loadMonth();
-
-})().catch(err => {
-  console.error(err);
-  document.body.innerHTML = '<div style="padding:24px;font-family:Arial">שגיאה כללית בטעינת הדף</div>';
-});
-</script>
-
+    document.getElementById("hebrew").textContent = hebrewDate;
+  </script>
 </body>
 </html>
